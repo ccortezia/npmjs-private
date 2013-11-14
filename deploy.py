@@ -6,8 +6,9 @@ from fabric.contrib.files import exists
 from fabric.operations import put
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-COUCHDB_PROJNAME = 'apache-couchdb'
+
 COUCHDB_VERSION = '1.5.0'
+COUCHDB_PROJNAME = 'apache-couchdb'
 COUCHDB_DIRNAME = '%s-%s' % (COUCHDB_PROJNAME, COUCHDB_VERSION)
 COUCHDB_FILENAME = '%s-%s.tar.gz' % (COUCHDB_PROJNAME, COUCHDB_VERSION)
 COUCHDB_URL = 'http://ftp.unicamp.br/pub/apache/couchdb/source/%s/%s' % (COUCHDB_VERSION, COUCHDB_FILENAME)
@@ -16,11 +17,24 @@ COUCHDB_REMOTE_INI = '/usr/local/etc/couchdb/local.ini'
 
 NODE_VERSION = '0.10'
 
+# -------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------
+
 def user_exists(username):
   with settings(warn_only=True):
     result = run("grep %s /etc/passwd" % username)
     return result.return_code == 0
 
+
+def on_active_nvm(cmd):
+  return 'source /home/%s/.profile; %s' % (env.user, cmd)
+
+
+def on_active_npm(cmd):
+  return on_active_nvm('nvm use %s; %s' % (NODE_VERSION, cmd))
+
+# -------------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------------
 
 @task
 def build():
@@ -33,7 +47,7 @@ def build():
       run('./configure')
       run('make')
       sudo('make install')
-    #sudo('rm -rf %s' % COUCHDB_DIRNAME)
+
 
 @task
 def configure():
@@ -50,12 +64,6 @@ def configure():
 def restart():
   sudo('service couchdb restart')
 
-
-def on_active_nvm(cmd):
-  return 'source /home/%s/.profile; %s' % (env.user, cmd)
-
-def on_active_npm(cmd):
-  return on_active_nvm('nvm use %s; %s' % (NODE_VERSION, cmd))
 
 @task
 def nvm():
@@ -97,4 +105,6 @@ def full():
   deps()
   build()
   configure()
+  nvm()
+  npmjs()
   restart()
